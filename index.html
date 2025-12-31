@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ありがとう → よろしく（干支バトン）</title>
+<meta name="description" content="2025年もありがとうございました。来年も仲良くしてくださいね。"/>
+
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=Inter:wght@600;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg0:#050816;
+    --bg1:#0b1026;
+    --bg2:#1a2a6c;
+    --sun:#ffb703;
+    --mint:#06d6a0;
+    --pink:#ff4d8d;
+    --card: rgba(255,255,255,.08);
+    --border: rgba(255,255,255,.16);
+    --text: rgba(255,255,255,.92);
+    --muted: rgba(255,255,255,.72);
+    --shadow: 0 18px 60px rgba(0,0,0,.55);
+    --radius: 22px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:"Zen Kaku Gothic New", system-ui, -apple-system, sans-serif;
+    color:var(--text);
+    background: radial-gradient(900px 700px at 20% 15%, rgba(255,183,3,.35), transparent 55%),
+                radial-gradient(900px 700px at 80% 15%, rgba(255,77,141,.28), transparent 55%),
+                radial-gradient(900px 700px at 50% 95%, rgba(6,214,160,.24), transparent 55%),
+                linear-gradient(160deg, var(--bg0), var(--bg2));
+    overflow:hidden;
+  }
+
+  /* animated background layer */
+  .bg-flow{
+    position:fixed; inset:-40%;
+    background:
+      conic-gradient(from 120deg, rgba(255,183,3,.14), rgba(6,214,160,.10), rgba(255,77,141,.12), rgba(17,138,178,.10), rgba(255,183,3,.14));
+    filter: blur(30px) saturate(120%);
+    opacity:.6;
+    animation: drift 18s ease-in-out infinite alternate;
+    pointer-events:none;
+  }
+  @keyframes drift{
+    0%{ transform: translate(-2%, -1%) rotate(0deg) scale(1.02); }
+    100%{ transform: translate(2%, 1%) rotate(8deg) scale(1.08); }
+  }
+
+  canvas#fx, canvas#noise{
+    position:fixed; inset:0;
+    width:100%; height:100%;
+    pointer-events:none;
+  }
+  canvas#noise{ opacity:.14; mix-blend-mode: overlay; }
+
+  .wrap{
+    position:relative;
+    height:100%;
+    display:grid;
+    place-items:center;
+    padding:20px;
+  }
+  .card{
+    width:min(860px, 94vw);
+    background: var(--card);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+    padding: 18px 16px 14px;
+  }
+
+  .top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .chip{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background: rgba(0,0,0,.14);
+    color:var(--muted);
+    font-size: 12.5px;
+    letter-spacing:.04em;
+  }
+  .dot{
+    width:9px;height:9px;border-radius:999px;
+    background: var(--sun);
+    box-shadow: 0 0 18px rgba(255,183,3,.75);
+    animation:pulse 1.3s ease-in-out infinite;
+  }
+  @keyframes pulse{50%{transform:scale(1.35);opacity:1}0%,100%{transform:scale(.95);opacity:.75}}
+
+  .title{
+    margin: 6px 0 0;
+    font-family: Inter, system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(20px, 3vw, 34px);
+    letter-spacing:.02em;
+    line-height:1.15;
+  }
+  .subtitle{
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: clamp(13px, 1.7vw, 15px);
+    line-height:1.6;
+  }
+
+  /* stage */
+  .stage{
+    margin-top: 14px;
+    position:relative;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius: 18px;
+    overflow:hidden;
+    background: rgba(0,0,0,.18);
+    height: min(360px, 46vh);
+  }
+
+  .lane{
+    position:absolute;
+    left:0; right:0;
+    top: 58%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+    opacity:.85;
+  }
+
+  /* sunrise arc */
+  .sun{
+    position:absolute;
+    left:50%;
+    top: 18%;
+    transform: translateX(-50%);
+    width: 180px;
+    height: 180px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 50% 60%, rgba(255,183,3,.85), rgba(255,183,3,.0) 65%);
+    filter: blur(0.2px);
+    opacity:.65;
+    animation: sunUp 2.2s ease-out forwards;
+  }
+  @keyframes sunUp{
+    from{ transform: translateX(-50%) translateY(30px) scale(.92); opacity:0;}
+    to{ transform: translateX(-50%) translateY(0) scale(1); opacity:.65;}
+  }
+
+  .mascot{
+    position:absolute;
+    top: 44%;
+    width: 150px;
+    transform: translateY(-50%);
+    filter: drop-shadow(0 18px 18px rgba(0,0,0,.35));
+    opacity:0;
+  }
+  .mascot svg{ width:100%; height:auto; display:block; }
+
+  /* bounce vibe */
+  .bounce{
+    animation: bob 0.7s ease-in-out infinite;
+  }
+  @keyframes bob{ 50%{ transform: translateY(calc(-50% - 8px)); } }
+
+  .baton{
+    position:absolute;
+    top: 44%;
+    left:50%;
+    transform: translate(-50%,-50%) rotate(-10deg);
+    width: 110px;
+    opacity:0;
+    filter: drop-shadow(0 14px 14px rgba(0,0,0,.35));
+  }
+
+  .copy{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    margin-top: 12px;
+  }
+  button{
+    appearance:none;
+    border:1px solid var(--border);
+    background: rgba(255,255,255,.10);
+    color: var(--text);
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-size: 14px;
+    cursor:pointer;
+    transition: transform .08s ease, background .2s ease;
+    user-select:none;
+  }
+  button:hover{ background: rgba(255,255,255,.16); }
+  button:active{ transform: translateY(1px) scale(.99); }
+  .primary{
+    border-color: rgba(255,183,3,.45);
+    background: rgba(255,183,3,.14);
+  }
+  .primary:hover{ background: rgba(255,183,3,.20); }
+
+  .message{
+    margin-top: 10px;
+    padding: 12px 12px;
+    border-radius: 16px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.18);
+    line-height:1.75;
+    font-size: clamp(15px, 2vw, 18px);
+    min-height: 4.2em;
+    white-space: pre-wrap;
+  }
+  .sig{
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height:1.6;
+  }
+
+  .tag{
+    display:inline-flex;
+    gap:8px;
+    align-items:center;
+    padding:8px 10px;
+    border-radius: 999px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.10);
+    font-size: 12px;
+    color: rgba(255,255,255,.78);
+  }
+
+  /* reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    .bg-flow, .dot, .bounce{ animation:none !important; }
+  }
+</style>
+</head>
+
+<body>
+  <div class="bg-flow"></div>
+  <canvas id="fx"></canvas>
+  <canvas id="noise"></canvas>
+
+  <div class="wrap">
+    <section class="card">
+      <div class="top">
+        <div class="chip"><span class="dot"></span><span id="yearChip">2025 → 2026</span></div>
+        <div class="chip" id="clock">--:--</div>
+      </div>
+
+      <div class="title">ありがとう → よろしく</div>
+      <div class="subtitle">干支が“バトンパス”して、新年へ。タップで何回でも再生できます。</div>
+
+      <div class="stage" id="stage">
+        <div class="sun"></div>
+        <div class="lane"></div>
+
+        <!-- Mascot: OLD (custom SVG) -->
+        <div class="mascot bounce" id="oldMascot" style="left:-180px;">
+          <!-- Snake-like abstract mascot (original) -->
+          <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" aria-label="旧干支">
+            <defs>
+              <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#06d6a0"/>
+                <stop offset="1" stop-color="#118ab2"/>
+              </linearGradient>
+              <linearGradient id="g2" x1="1" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffb703"/>
+                <stop offset="1" stop-color="#ff4d8d"/>
+              </linearGradient>
+            </defs>
+            <!-- body -->
+            <path d="M40 120 C55 70, 90 60, 112 92 C135 128, 160 132, 188 108
+                     C210 90, 218 70, 205 55 C188 35, 150 38, 140 60"
+                  fill="none" stroke="url(#g1)" stroke-width="22" stroke-linecap="round"/>
+            <!-- head -->
+            <path d="M134 62 C146 44, 174 46, 184 60 C194 74, 182 92, 162 92
+                     C146 92, 126 78, 134 62 Z"
+                  fill="url(#g2)" opacity=".95"/>
+            <!-- eye -->
+            <circle cx="168" cy="66" r="6" fill="rgba(255,255,255,.92)"/>
+            <circle cx="168" cy="66" r="3" fill="rgba(0,0,0,.65)"/>
+            <!-- tongue -->
+            <path d="M188 74 Q206 80 214 92" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="4" stroke-linecap="round"/>
+            <path d="M214 92 l10 -6" stroke="rgba(255,255,255,.85)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M214 92 l10 6" stroke="rgba(255,255,255,.85)" stroke-width="3" stroke-linecap="round"/>
+            <!-- cheeks -->
+            <circle cx="154" cy="82" r="7" fill="rgba(255,77,141,.35)"/>
+          </svg>
+        </div>
+
+        <!-- Baton -->
+        <div class="baton" id="baton">
+          <svg viewBox="0 0 260 120" xmlns="http://www.w3.org/2000/svg" aria-label="バトン">
+            <defs>
+              <linearGradient id="rb" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#ffb703"/>
+                <stop offset="1" stop-color="#06d6a0"/>
+              </linearGradient>
+              <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="6" result="b"/>
+                <feMerge>
+                  <feMergeNode in="b"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            <rect x="50" y="40" rx="16" ry="16" width="160" height="40" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.28)"/>
+            <rect x="60" y="46" rx="14" ry="14" width="140" height="28" fill="url(#rb)" opacity=".92" filter="url(#glow)"/>
+            <!-- sparkle -->
+            <path d="M36 60 l10 -6 l-6 10 l6 10 l-10 -6 l-10 6 l6 -10 l-6 -10 z"
+                  fill="rgba(255,255,255,.85)" opacity=".95"/>
+            <path d="M226 60 l10 -6 l-6 10 l6 10 l-10 -6 l-10 6 l6 -10 l-6 -10 z"
+                  fill="rgba(255,255,255,.85)" opacity=".95"/>
+          </svg>
+        </div>
+
+        <!-- Mascot: NEXT (custom SVG) -->
+        <div class="mascot bounce" id="nextMascot" style="right:-180px;">
+          <!-- Horse-like abstract mascot (original) -->
+          <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" aria-label="次干支">
+            <defs>
+              <linearGradient id="h1" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#ffb703"/>
+                <stop offset="1" stop-color="#ff4d8d"/>
+              </linearGradient>
+              <linearGradient id="h2" x1="1" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#06d6a0"/>
+                <stop offset="1" stop-color="#118ab2"/>
+              </linearGradient>
+            </defs>
+            <!-- head -->
+            <path d="M148 52 C170 34, 202 42, 210 66 C218 92, 200 114, 170 110
+                     C150 108, 130 94, 132 76 C134 64, 138 58, 148 52 Z"
+                  fill="url(#h1)" opacity=".95"/>
+            <!-- ear -->
+            <path d="M156 44 C154 28, 170 26, 178 40 C170 44, 164 48, 156 44 Z"
+                  fill="rgba(255,255,255,.25)"/>
+            <!-- neck/body -->
+            <path d="M132 86 C112 112, 78 124, 58 108 C44 96, 42 78, 54 66
+                     C78 42, 122 46, 132 86 Z"
+                  fill="none" stroke="url(#h2)" stroke-width="22" stroke-linecap="round"/>
+            <!-- eye -->
+            <circle cx="186" cy="72" r="6" fill="rgba(255,255,255,.92)"/>
+            <circle cx="186" cy="72" r="3" fill="rgba(0,0,0,.65)"/>
+            <!-- nose -->
+            <circle cx="206" cy="88" r="6" fill="rgba(0,0,0,.22)"/>
+            <!-- cheek -->
+            <circle cx="168" cy="92" r="7" fill="rgba(255,255,255,.22)"/>
+            <!-- mane -->
+            <path d="M150 56 C160 54, 170 56, 178 62 C170 62, 162 64, 154 70 Z"
+                  fill="rgba(255,255,255,.26)"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="copy">
+        <button class="primary" id="replay">▶︎ 再生</button>
+        <button id="swap">💬 文面チェンジ</button>
+        <button id="copyBtn">📋 コピー</button>
+        <span class="tag">🎍 new year</span>
+        <span class="tag">✨ eto baton</span>
+        <span class="tag">🎊 tap to replay</span>
+      </div>
+
+      <div class="message" id="msg"></div>
+      <div class="sig">※ GitHub Pagesに置けばURLで共有できます。スマホでもOK。</div>
+    </section>
+  </div>
+
+<script>
+/* ---------------- clock & label ---------------- */
+const clock = document.getElementById('clock');
+function tick(){
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  clock.textContent = `${hh}:${mm}`;
+}
+tick(); setInterval(tick, 10000);
+
+const yearChip = document.getElementById('yearChip');
+yearChip.textContent = `2025 → 2026`; // 表示だけ固定（必要なら自動化も可）
+
+/* ---------------- message ---------------- */
+const msgEl = document.getElementById('msg');
+const messages = [
+`2025年もありがとうございました。
+来年も仲良くしてくださいね。`,
+`今年もいろいろ助けてもらいました。
+2026年も、ゆるくよろしく。`,
+`年末の「ありがとう」を、
+新年の「よろしく」へ。`
+];
+let mi = 0;
+function setMsg(){
+  msgEl.textContent = messages[mi];
+}
+setMsg();
+
+document.getElementById('swap').addEventListener('click', ()=>{
+  mi = (mi+1)%messages.length;
+  setMsg();
+});
+
+/* ---------------- copy ---------------- */
+document.getElementById('copyBtn').addEventListener('click', async ()=>{
+  try{
+    await navigator.clipboard.writeText(messages[mi]);
+    toast('コピーしました');
+  }catch(e){
+    toast('コピーできませんでした（ブラウザ制限）');
+  }
+});
+
+/* ---------------- particles + confetti canvas ---------------- */
+const fx = document.getElementById('fx');
+const ctx = fx.getContext('2d');
+function resize(){
+  fx.width = innerWidth * devicePixelRatio;
+  fx.height = innerHeight * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+addEventListener('resize', resize); resize();
+
+const particles = [];
+function seedParticles(){
+  particles.length = 0;
+  for(let i=0;i<70;i++){
+    particles.push({
+      x: Math.random()*innerWidth,
+      y: Math.random()*innerHeight,
+      r: 1.5 + Math.random()*2.8,
+      vx: -0.25 + Math.random()*0.5,
+      vy: -0.2 + Math.random()*0.4,
+      a: 0.12 + Math.random()*0.22
+    });
+  }
+}
+seedParticles();
+
+let confetti = [];
+function confettiBurst(power=1){
+  const colors = ['#ffb703','#06d6a0','#ff4d8d','#ffffff','#118ab2'];
+  const cx = innerWidth/2;
+  const cy = innerHeight*0.34;
+  for(let i=0;i<180*power;i++){
+    confetti.push({
+      x: cx + (Math.random()-0.5)*40,
+      y: cy + (Math.random()-0.5)*20,
+      vx: (Math.random()-0.5)*9,
+      vy: -(4 + Math.random()*9),
+      g: 0.18 + Math.random()*0.12,
+      w: 4 + Math.random()*5,
+      h: 3 + Math.random()*4,
+      rot: Math.random()*Math.PI,
+      vr: (Math.random()-0.5)*0.28,
+      a: 1,
+      c: colors[(Math.random()*colors.length)|0]
+    });
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+
+  // drifting particles
+  for(const p of particles){
+    p.x += p.vx; p.y += p.vy;
+    if(p.x< -20) p.x = innerWidth+20;
+    if(p.x> innerWidth+20) p.x = -20;
+    if(p.y< -20) p.y = innerHeight+20;
+    if(p.y> innerHeight+20) p.y = -20;
+    ctx.globalAlpha = p.a;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+  }
+
+  // confetti
+  if(confetti.length){
+    const next = [];
+    for(const c of confetti){
+      c.vy += c.g;
+      c.x += c.vx;
+      c.y += c.vy;
+      c.rot += c.vr;
+      c.a *= 0.992;
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0,c.a);
+      ctx.translate(c.x,c.y);
+      ctx.rotate(c.rot);
+      ctx.fillStyle = c.c;
+      ctx.fillRect(-c.w/2,-c.h/2,c.w,c.h);
+      ctx.restore();
+
+      if(c.y < innerHeight + 40 && c.a > 0.03) next.push(c);
+    }
+    confetti = next;
+  }
+
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(draw);
+}
+draw();
+
+/* ---------------- subtle paper-noise ---------------- */
+const noise = document.getElementById('noise');
+const nctx = noise.getContext('2d');
+function resizeNoise(){
+  noise.width = innerWidth * devicePixelRatio;
+  noise.height = innerHeight * devicePixelRatio;
+  nctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+addEventListener('resize', resizeNoise); resizeNoise();
+
+function paintNoise(){
+  const img = nctx.createImageData(innerWidth, innerHeight);
+  const d = img.data;
+  for(let i=0;i<d.length;i+=4){
+    const v = (Math.random()*255)|0;
+    d[i]=v; d[i+1]=v; d[i+2]=v; d[i+3]=18; // alpha low
+  }
+  nctx.putImageData(img,0,0);
+}
+paintNoise();
+setInterval(paintNoise, 1400);
+
+/* ---------------- animation timeline (Web Animations API) ---------------- */
+const oldM = document.getElementById('oldMascot');
+const nextM = document.getElementById('nextMascot');
+const baton = document.getElementById('baton');
+const stage = document.getElementById('stage');
+
+let running = false;
+
+function animateOnce(){
+  if(running) return;
+  running = true;
+
+  // reset
+  oldM.style.left = "-180px";
+  oldM.style.opacity = "0";
+  nextM.style.right = "-180px";
+  nextM.style.opacity = "0";
+  baton.style.opacity = "0";
+  baton.style.transform = "translate(-50%,-50%) rotate(-10deg) scale(.9)";
+
+  // entrance old
+  oldM.animate([
+    { transform: "translateY(-50%) translateX(0) scale(.95)", opacity: 0 },
+    { transform: "translateY(-50%) translateX(0) scale(1)", opacity: 1 }
+  ], { duration: 380, easing: "cubic-bezier(.2,1.4,.2,1)", fill:"forwards" });
+
+  // run old to center-left
+  oldM.animate([
+    { left: "-180px" },
+    { left: "calc(50% - 240px)" }
+  ], { duration: 1300, easing: "cubic-bezier(.2,1,.2,1)", fill:"forwards", delay: 160 });
+
+  // baton pop-in
+  baton.animate([
+    { opacity: 0, transform: "translate(-50%,-50%) rotate(-10deg) scale(.85)" },
+    { opacity: 1, transform: "translate(-50%,-50%) rotate(-10deg) scale(1)" }
+  ], { duration: 420, easing:"cubic-bezier(.2,1.4,.2,1)", fill:"forwards", delay: 850 });
+
+  // entrance next
+  nextM.animate([
+    { transform: "translateY(-50%) translateX(0) scale(.95)", opacity: 0 },
+    { transform: "translateY(-50%) translateX(0) scale(1)", opacity: 1 }
+  ], { duration: 380, easing: "cubic-bezier(.2,1.4,.2,1)", fill:"forwards", delay: 980 });
+
+  // run next to center-right
+  nextM.animate([
+    { right: "-180px" },
+    { right: "calc(50% - 260px)" }
+  ], { duration: 1200, easing: "cubic-bezier(.2,1,.2,1)", fill:"forwards", delay: 980 });
+
+  // baton pass (shake + spark burst)
+  baton.animate([
+    { transform: "translate(-50%,-50%) rotate(-10deg) scale(1)" },
+    { transform: "translate(-50%,-50%) rotate(8deg) scale(1.04)" },
+    { transform: "translate(-50%,-50%) rotate(-6deg) scale(1.02)" },
+    { transform: "translate(-50%,-50%) rotate(4deg) scale(1.03)" },
+    { transform: "translate(-50%,-50%) rotate(0deg) scale(1)" }
+  ], { duration: 520, easing:"ease-in-out", fill:"forwards", delay: 1500 });
+
+  setTimeout(()=> confettiBurst(1), 1650);
+
+  // exit old to left
+  oldM.animate([
+    { left: "calc(50% - 240px)", opacity: 1 },
+    { left: "-220px", opacity: .0 }
+  ], { duration: 1000, easing:"cubic-bezier(.2,1,.2,1)", fill:"forwards", delay: 1850 });
+
+  // move baton to next (fake transfer)
+  baton.animate([
+    { transform: "translate(-50%,-50%) rotate(0deg) scale(1)", opacity: 1 },
+    { transform: "translate(calc(-50% + 170px), calc(-50% - 10px)) rotate(12deg) scale(1.02)", opacity: 1 },
+    { transform: "translate(calc(-50% + 210px), calc(-50% - 10px)) rotate(12deg) scale(1)", opacity: .0 }
+  ], { duration: 980, easing:"cubic-bezier(.2,1,.2,1)", fill:"forwards", delay: 1780 });
+
+  // next dash to center + settle
+  nextM.animate([
+    { right: "calc(50% - 260px)" },
+    { right: "calc(50% - 60px)" }
+  ], { duration: 980, easing:"cubic-bezier(.12,1.1,.2,1)", fill:"forwards", delay: 1900 });
+
+  // final burst
+  setTimeout(()=> confettiBurst(1.2), 2650);
+
+  // allow replay
+  setTimeout(()=>{
+    running = false;
+  }, 3400);
+}
+
+document.getElementById('replay').addEventListener('click', animateOnce);
+stage.addEventListener('click', animateOnce);
+
+// auto play on load
+setTimeout(animateOnce, 250);
+
+/* ---------------- tiny toast ---------------- */
+let toastTimer;
+function toast(text){
+  clearTimeout(toastTimer);
+  let t = document.getElementById('toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.position='fixed';
+    t.style.left='50%';
+    t.style.bottom='22px';
+    t.style.transform='translateX(-50%)';
+    t.style.padding='10px 12px';
+    t.style.border='1px solid rgba(255,255,255,.16)';
+    t.style.background='rgba(0,0,0,.35)';
+    t.style.backdropFilter='blur(10px)';
+    t.style.borderRadius='14px';
+    t.style.color='rgba(255,255,255,.92)';
+    t.style.fontSize='13px';
+    t.style.zIndex='9999';
+    document.body.appendChild(t);
+  }
+  t.textContent = text;
+  t.style.opacity='1';
+  toastTimer = setTimeout(()=>{ t.style.opacity='0'; }, 1400);
+}
+</script>
+</body>
+</html>
